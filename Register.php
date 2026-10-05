@@ -1,30 +1,36 @@
 <?php 
 @include 'config.php'; 
- 
+
 if (isset($_POST['submit'])) { 
-    $name = mysqli_real_escape_string($conn, $_POST['name']); 
-    $email = mysqli_real_escape_string($conn, $_POST['email']); 
-    $pass = md5($_POST['password']); 
-    $cpass = md5($_POST['cpassword']); 
-    $user_type = $_POST['user_type']; 
- 
-    $select = "SELECT * FROM user_form WHERE email = '$email' AND password = 
-'$pass'"; 
-    $result = mysqli_query($conn, $select); 
- 
-    if (mysqli_num_rows($result) > 0) { 
-        $error[] = 'User already exists!'; 
-    } else { 
-        if ($pass != $cpass) { 
-            $error[] = 'Password not matched!'; 
-        } else { 
-            $insert = "INSERT INTO user_form (name, email, password, 
-user_type) VALUES ('$name', '$email', '$pass', '$user_type')"; 
-            mysqli_query($conn, $insert); 
-            header('location: login.php'); 
-        } 
-    } 
-}; 
+    $name = isset($_POST['name']) ? mysqli_real_escape_string($conn, trim($_POST['name'])) : '';
+    $email = isset($_POST['email']) ? mysqli_real_escape_string($conn, trim($_POST['email'])) : '';
+    $password = $_POST['password'] ?? '';
+    $cpassword = $_POST['cpassword'] ?? '';
+    $user_type = 'user';
+
+    if (empty($name) || empty($email) || empty($password) || empty($cpassword)) {
+        $error[] = 'All fields are required!';
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $error[] = 'Please enter a valid email address!';
+    } elseif (strlen($password) < 8) {
+        $error[] = 'Password must be at least 8 characters long!';
+    } elseif ($password !== $cpassword) {
+        $error[] = 'Password not matched!';
+    } else {
+        $select = "SELECT * FROM user_form WHERE email = '$email' LIMIT 1";
+        $result = mysqli_query($conn, $select);
+
+        if (mysqli_num_rows($result) > 0) {
+            $error[] = 'User already exists!';
+        } else {
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+            $insert = "INSERT INTO user_form (name, email, password, user_type) VALUES ('$name', '$email', '$hashedPassword', '$user_type')";
+            mysqli_query($conn, $insert);
+            header('location: login.php');
+            exit();
+        }
+    }
+}
 ?> 
  
 <!DOCTYPE html> 
@@ -46,22 +52,13 @@ user_type) VALUES ('$name', '$email', '$pass', '$user_type')";
                 echo '<span class="error msg">'.$error.'</span>'; 
                 }; 
             }; 
- 
+
             ?> 
-            <input type="text" name="name" required placeholder="enter your 
-name"> 
-            <input type="email" name="email" required placeholder="enter your 
-email"> 
-            <input type="password" name="password" required placeholder="enter 
-your password"> 
-            <input type="password" name="cpassword" required 
-placeholder="Confirm your password"> 
-            <select name="user_type" id=""> 
-                <option value="user">patient</option> 
-                <option value="admin">doctor</option> 
-            </select> 
-            <input type="submit" name="submit" value="register  now" 
-class="form-btn"> 
+            <input type="text" name="name" required placeholder="enter your name"> 
+            <input type="email" name="email" required placeholder="enter your email"> 
+            <input type="password" name="password" required placeholder="enter your password"> 
+            <input type="password" name="cpassword" required placeholder="Confirm your password"> 
+            <input type="submit" name="submit" value="register now" class="form-btn"> 
             <p>already have an account? <a href="login.php">login now</a></p> 
  
         </form> 
